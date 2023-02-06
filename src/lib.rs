@@ -16,7 +16,7 @@ impl Wordle {
                     .lines()
                     .map(|line| {
                         line.split_once(" ")
-                            .expect("Every line is word + space + occurances.")
+                            .expect("Every line is word + space + occurances")
                         .0
                     })),
         }
@@ -105,6 +105,87 @@ pub struct Guess {
     pub mask: [Correctness; 5],
 }
 
+impl Guess {
+    pub fn matches(&self, word: &str) -> bool {
+        assert_eq!(self.word.len(), 5);
+        assert_eq!(word.len(), 5);
+
+        let mut used = [false; 5];
+
+        for (i, ((g, &m), w)) in self
+            .word
+            .chars()
+            .zip(&self.mask)
+            .zip(word.chars())
+            .enumerate()
+        {
+            if m == Correctness::Correct {
+                if g != w {
+                    return false;
+                } else {
+                    used[i] = true;
+                }
+            }
+        }
+
+        for (i, (w, &m)) in word
+            .chars()
+            .zip(&self.mask)
+            .enumerate()
+        {
+            if m == Correctness::Correct {
+                continue;
+            }
+
+            let mut plausible = true;
+            if self
+                .word
+                .chars()
+                .zip(&self.mask)
+                .enumerate()
+                .any(|(j, (g, m))|
+            {
+                    if g != w {
+                        return false;
+                    }
+                    if used[j] {
+                        return false;
+                    }
+                    match m {
+                        Correctness::Correct => unreachable!(
+                            "all correct guesses should have result in return or be used"
+                        ),
+                        Correctness::Misplaced if j == i => {
+                            plausible = false;
+
+                            return false;
+                        }
+                        Correctness::Misplaced => {
+                            used[j] = true;
+
+                            return true;
+                        }
+                        Correctness::Wrong => {
+                            plausible = false;
+
+                            return false;
+                        }
+                    }
+                })
+                && plausible
+            {
+                // Character `w` was yellow in the previous guess
+            } else if !plausible {
+                return false;
+            } else {
+                // we have no information about character `w`
+            }
+        }
+
+        true
+    }
+}
+
 pub trait Guesser {
     fn guess(&mut self, history: &[Guess]) -> String;
 }
@@ -129,7 +210,29 @@ macro_rules! guesser {
 }
 
 #[cfg(test)]
+macro_rules! mask {
+    (C) => {$crate::Correctness::Correct};
+    (M) => {$crate::Correctness::Misplaced};
+    (W) => {$crate::Correctness::Wrong};
+    ($($c:tt)+) => {[
+        $(mask!($c)),+
+    ]}
+}
+
+#[cfg(test)]
 mod tests {
+    mod guess_matcher {
+        use crate::Guess;
+
+        #[test]
+        fn matches() {
+            assert!(Guess {
+                word: "abcde".to_string(),
+                mask: mask![C C C C C],
+            }.matches("abcde"));
+        }
+    }
+
     mod game {
         use crate::Wordle;
 
@@ -225,15 +328,6 @@ mod tests {
     }
     mod compute {
         use crate::Correctness;
-
-        macro_rules! mask {
-            (C) => {Correctness::Correct};
-            (M) => {Correctness::Misplaced};
-            (W) => {Correctness::Wrong};
-            ($($c:tt)+) => {[
-                $(mask!($c)),+
-            ]}
-        }
 
         #[test]
         fn all_green() {
