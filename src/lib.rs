@@ -238,7 +238,7 @@ mod tests {
         macro_rules! check {
             ($prev:literal + [$($mask:tt)+] allows $next:literal) => {
                 assert!(Guess {
-                    word: Cow::Owned($prev.to_string()),
+                    word: Cow::Borrowed($prev),
                     mask: mask![$($mask )+]
                 }
                 .matches($next));
@@ -248,7 +248,7 @@ mod tests {
 
             ($prev:literal + [$($mask:tt)+] disallows $next:literal) => {
                 assert!(!Guess {
-                    word: Cow::Owned($prev.to_string()),
+                    word: Cow::Borrowed($prev),
                     mask: mask![$($mask )+]
                 }
                 .matches($next));
