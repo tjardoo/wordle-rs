@@ -15,6 +15,7 @@ struct Args {
 #[derive(Clone)]
 enum Implementation {
     Naive,
+    Allocs,
 }
 
 impl std::str::FromStr for Implementation {
@@ -23,6 +24,7 @@ impl std::str::FromStr for Implementation {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "naive" => Ok(Self::Naive),
+            "allocs" => Ok(Self::Allocs),
             _ => Err(format!("Unknown implementation '{}'", s)),
         }
     }
@@ -34,6 +36,9 @@ fn main() {
     match args.implementation {
         Implementation::Naive => {
             play(wordle::algorithms::Naive::new, args.max)
+        },
+        Implementation::Allocs => {
+            play(wordle::algorithms::Allocs::new, args.max)
         },
     }
 }
