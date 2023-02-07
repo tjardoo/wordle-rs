@@ -224,12 +224,38 @@ mod tests {
     mod guess_matcher {
         use crate::Guess;
 
+        macro_rules! check {
+            ($prev:literal + [$($mask:tt)+] allows $next:literal) => {
+                assert!(Guess {
+                    word: $prev.to_string(),
+                    mask: mask![$($mask )+]
+                }
+                .matches($next));
+
+                // assert_eq!($crate::Correctness::compute($next, $prev), mask![$($mask )+]);
+            };
+
+            ($prev:literal + [$($mask:tt)+] disallows $next:literal) => {
+                assert!(!Guess {
+                    word: $prev.to_string(),
+                    mask: mask![$($mask )+]
+                }
+                .matches($next));
+
+                // assert_ne!($crate::Correctness::compute($next, $prev), mask![$($mask )+]);
+            };
+        }
+
         #[test]
         fn matches() {
-            assert!(Guess {
-                word: "abcde".to_string(),
-                mask: mask![C C C C C],
-            }.matches("abcde"));
+            check!("abcde" + [C C C C C] allows "abcde");
+            check!("abcdf" + [C C C C C] disallows "abcde");
+            check!("abcde" + [W W W W W] allows "fghij");
+            check!("abcde" + [M M M M M] allows "bcdea");
+            check!("aaabb" + [C M W W W] disallows "accaa");
+            check!("baaaa" + [W C M W W] allows "aaccc");
+            check!("baaaa" + [W C M W W] disallows "caacc");
+            check!("baaaa" + [W C M W W] disallows "caacc");
         }
     }
 
