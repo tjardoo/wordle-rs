@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Neg};
 
-use crate::{Guesser, Guess, DICTIONARY};
+use crate::{Guesser, Guess, DICTIONARY, Correctness};
 
 pub struct Naive {
     remaining: HashMap<&'static str, usize>,
@@ -25,8 +25,6 @@ impl Naive {
 #[derive(Debug, Clone, Copy)]
 struct Candidate {
     word: &'static str,
-    #[allow(dead_code)]
-    count: usize,
     goodness: f64,
 }
 
@@ -36,23 +34,55 @@ impl Guesser for Naive {
             self.remaining.retain(|word, _| last.matches(word));
         }
 
+        if history.is_empty() {
+            return "tares".to_string();
+        }
+
+        let remaining_count: usize = self.remaining.iter().map(|(_, &c)| c).sum();
+
         let mut best: Option<Candidate> = None;
 
-        for (&word, &count) in &self.remaining {
-            let goodness = 0.0;
+        for (&word, _) in &self.remaining {
+            // - SUM_i p_i * log_2(p_i)
+
+            let mut sum = 0.0;
+
+            for pattern in Correctness::patterns() {
+                let mut in_pattern_total = 0;
+
+                for (candidate, count) in &self.remaining {
+                    let g = Guess {
+                        word: word.to_string(),
+                        mask: pattern,
+                    };
+
+                    if g.matches(candidate) {
+                        in_pattern_total += count;
+                    }
+                }
+
+                if in_pattern_total == 0 {
+                    continue;
+                }
+
+               let p_of_this_pattern = in_pattern_total as f64 / remaining_count as f64;
+               sum += p_of_this_pattern * p_of_this_pattern.log2();
+            }
+
+            let goodness = sum.neg();
 
             if let Some(c) = best {
                 if goodness > c.goodness {
+                    eprintln!("{} is better than {} ({} > {})", word, c.word, goodness, c.goodness);
+
                     best = Some(Candidate {
                         word,
-                        count,
                         goodness,
                     })
                 }
             } else {
                 best = Some(Candidate {
                     word,
-                    count,
                     goodness,
                 });
             }

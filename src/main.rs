@@ -8,6 +8,10 @@ fn main() {
     for answer in GAMES.split_whitespace() {
         let guesser = wordle::algorithms::Naive::new();
 
-        w.play(answer, guesser);
+        if let Some(score) = w.play(answer, guesser) {
+            println!("guessed '{}' in {}", answer, score);
+        } else {
+            eprintln!("Failed to guess");
+        }
     }
 }
