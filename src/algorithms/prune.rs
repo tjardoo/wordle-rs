@@ -1,20 +1,21 @@
-use std::{ops::Neg, borrow::Cow, collections::BTreeMap};
+use std::{ops::Neg, borrow::Cow};
 use once_cell::sync::OnceCell;
 
 use crate::{Guesser, Guess, DICTIONARY, Correctness, Word};
 
 static INITIAL: OnceCell<Vec<(Word, usize)>> = OnceCell::new();
-static MATCH: OnceCell<BTreeMap<(Word, Word, [Correctness; 5]), bool>> = OnceCell::new();
+static PATTERNS: OnceCell<Vec<[Correctness; 5]>> = OnceCell::new();
 
-pub struct Precalc {
+pub struct Prune {
     remaining: Cow<'static, Vec<(Word, usize)>>,
+    patterns: Cow<'static, Vec<[Correctness; 5]>>,
 }
 
-impl Precalc {
+impl Prune {
     pub fn new() -> Self {
-        Precalc {
+        Prune {
             remaining: Cow::Borrowed(INITIAL.get_or_init(|| {
-                let mut words = Vec::from_iter(DICTIONARY.lines().map(|line| {
+                Vec::from_iter(DICTIONARY.lines().map(|line| {
                     let (word, count) = line
                         .split_once(" ")
                         .expect("Every line is word + space + occurances");
@@ -24,11 +25,10 @@ impl Precalc {
                     let count = count.parse().expect("Every count is a number");
 
                     (word, count)
-                }));
-
-                words.sort_unstable_by_key(|&(_, count)| std::cmp::Reverse(count));
-
-                words
+                }))
+            })),
+            patterns: Cow::Borrowed(PATTERNS.get_or_init(|| {
+                Correctness::patterns().collect()
             })),
         }
     }
@@ -40,7 +40,7 @@ struct Candidate {
     goodness: f64,
 }
 
-impl Guesser for Precalc {
+impl Guesser for Prune {
     fn guess(&mut self, history: &[Guess]) -> Word {
         if let Some(last) = history.last() {
             if matches!(self.remaining, Cow::Owned(_)) {
@@ -59,73 +59,59 @@ impl Guesser for Precalc {
         }
 
         if history.is_empty() {
+            self.patterns = Cow::Borrowed(PATTERNS.get().unwrap());
+
             return *b"tares";
+        } else {
+            assert!(!self.patterns.is_empty());
         }
 
         let remaining_count: usize = self.remaining.iter().map(|&(_, c)| c).sum();
 
         let mut best: Option<Candidate> = None;
 
-        for &(word, _) in &*self.remaining {
+        for &(word, count) in &*self.remaining {
             let mut sum = 0.0;
 
-            for pattern in Correctness::patterns() {
+            let check_pattern = |pattern: &[Correctness; 5]| {
                 let mut in_pattern_total = 0;
 
                 for &(candidate, count) in &*self.remaining {
-                    let matches = MATCH.get_or_init(|| {
-                        let words = &INITIAL.get().unwrap()[..1024];
-                        // let patterns = Correctness::patterns();
-
-                        let mut out: BTreeMap<([u8; 5], [u8; 5], [Correctness; 5]), bool> = BTreeMap::new();
-
-                        for (word1, _) in words {
-                            for (word2, _) in words {
-                                if word2 < word1 {
-                                    break;
-                                }
-
-                                for pattern in Correctness::patterns() {
-                                    let g = Guess {
-                                        word,
-                                        mask: pattern,
-                                    };
-
-                                    out.insert((word1.clone(), word2.clone(), pattern), g.matches(candidate));
-                                }
-                            }
-                        }
-
-                        out
-                    });
-
-                    let key = if word < candidate {
-                        (word, candidate, pattern)
-                    } else {
-                        (candidate, word, pattern)
+                    let g = Guess {
+                        word,
+                        mask: *pattern,
                     };
 
-                    if matches.get(&key).copied().unwrap_or_else(|| {
-                        let g = Guess {
-                            word,
-                            mask: pattern,
-                        };
-
-                        g.matches(candidate)
-                    }) {
+                    if g.matches(candidate) {
                         in_pattern_total += count;
                     }
                 }
 
                 if in_pattern_total == 0 {
-                    continue;
+                    return false;
                 }
 
-               let p_of_this_pattern = in_pattern_total as f64 / remaining_count as f64;
-               sum += p_of_this_pattern * p_of_this_pattern.log2();
+                let p_of_this_pattern = in_pattern_total as f64 / remaining_count as f64;
+                sum += p_of_this_pattern * p_of_this_pattern.log2();
+
+                return true;
+            };
+
+            if matches!(self.patterns, Cow::Owned(_)) {
+                self.patterns.to_mut().retain(check_pattern);
+            } else {
+                self.patterns = Cow::Owned(
+                    self.patterns
+                        .iter()
+                        .copied()
+                        .filter(check_pattern)
+                        .collect()
+                    );
             }
 
-            let goodness = sum.neg();
+            let p_word = count as f64 / remaining_count as f64;
+
+            let goodness = p_word * sum.neg();
 
             if let Some(c) = best {
                 if goodness > c.goodness {

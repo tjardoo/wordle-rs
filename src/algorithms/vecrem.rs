@@ -45,7 +45,6 @@ impl Guesser for Vecrem {
         let mut best: Option<Candidate> = None;
 
         for &(word, _) in &self.remaining {
-            // - SUM_i p_i * log_2(p_i)
 
             let mut sum = 0.0;
 

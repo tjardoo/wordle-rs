@@ -19,6 +19,7 @@ enum Implementation {
     Once,
     Precalc,
     Weight,
+    Prune,
 }
 
 impl std::str::FromStr for Implementation {
@@ -31,6 +32,7 @@ impl std::str::FromStr for Implementation {
             "once" => Ok(Self::Once),
             "precalc" => Ok(Self::Precalc),
             "weight" => Ok(Self::Weight),
+            "prune" => Ok(Self::Prune),
             _ => Err(format!("Unknown implementation '{}'", s)),
         }
     }
@@ -54,6 +56,9 @@ fn main() {
         },
         Implementation::Weight => {
             play(wordle::algorithms::Weight::new, args.max)
+        },
+        Implementation::Prune => {
+            play(wordle::algorithms::Prune::new, args.max)
         },
     }
 }
