@@ -17,6 +17,7 @@ enum Implementation {
     Naive,
     Allocs,
     Vecrem,
+    Once,
 }
 
 impl std::str::FromStr for Implementation {
@@ -27,6 +28,7 @@ impl std::str::FromStr for Implementation {
             "naive" => Ok(Self::Naive),
             "allocs" => Ok(Self::Allocs),
             "vecrem" => Ok(Self::Vecrem),
+            "once" => Ok(Self::Once),
             _ => Err(format!("Unknown implementation '{}'", s)),
         }
     }
@@ -44,6 +46,9 @@ fn main() {
         },
         Implementation::Vecrem => {
             play(wordle::algorithms::Vecrem::new, args.max)
+        },
+        Implementation::Once => {
+            play(wordle::algorithms::OnceInit::new, args.max)
         },
     }
 }
