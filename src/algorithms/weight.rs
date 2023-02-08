@@ -1,15 +1,19 @@
-use std::ops::Neg;
+use std::{ops::Neg, borrow::Cow};
+use once_cell::sync::OnceCell;
 
 use crate::{Guesser, Guess, DICTIONARY, Correctness, Word};
 
-pub struct Vecrem {
-    remaining: Vec<(Word, usize)>,
+static INITIAL: OnceCell<Vec<(Word, usize)>> = OnceCell::new();
+
+pub struct Weight {
+    remaining: Cow<'static, Vec<(Word, usize)>>,
 }
 
-impl Vecrem {
+impl Weight {
     pub fn new() -> Self {
-        Vecrem {
-            remaining: Vec::from_iter(DICTIONARY.lines().map(|line| {
+        Weight {
+            remaining: Cow::Borrowed(INITIAL.get_or_init(|| {
+                Vec::from_iter(DICTIONARY.lines().map(|line| {
                     let (word, count) = line
                         .split_once(" ")
                         .expect("Every line is word + space + occurances");
@@ -19,7 +23,8 @@ impl Vecrem {
                     let count = count.parse().expect("Every count is a number");
 
                     (word, count)
-                })),
+                }))
+            })),
         }
     }
 }
@@ -30,10 +35,22 @@ struct Candidate {
     goodness: f64,
 }
 
-impl Guesser for Vecrem {
+impl Guesser for Weight {
     fn guess(&mut self, history: &[Guess]) -> Word {
         if let Some(last) = history.last() {
-            self.remaining.retain(|&(word, _)| last.matches(word));
+            if matches!(self.remaining, Cow::Owned(_)) {
+                self.remaining
+                    .to_mut()
+                    .retain(|&(word, _)| last.matches(word));
+            } else {
+                self.remaining = Cow::Owned(
+                    self.remaining
+                        .iter()
+                        .filter(|&&(word, _)| last.matches(word))
+                        .copied()
+                        .collect(),
+                );
+            }
         }
 
         if history.is_empty() {
@@ -44,7 +61,7 @@ impl Guesser for Vecrem {
 
         let mut best: Option<Candidate> = None;
 
-        for &(word, _) in &self.remaining {
+        for &(word, count) in &*self.remaining {
             // - SUM_i p_i * log_2(p_i)
 
             let mut sum = 0.0;
@@ -52,7 +69,7 @@ impl Guesser for Vecrem {
             for pattern in Correctness::patterns() {
                 let mut in_pattern_total = 0;
 
-                for &(candidate, count) in &self.remaining {
+                for &(candidate, count) in &*self.remaining {
                     let g = Guess {
                         word,
                         mask: pattern,
@@ -71,7 +88,9 @@ impl Guesser for Vecrem {
                sum += p_of_this_pattern * p_of_this_pattern.log2();
             }
 
-            let goodness = sum.neg();
+            let p_word = count as f64 / remaining_count as f64;
+
+            let goodness = p_word * sum.neg();
 
             if let Some(c) = best {
                 if goodness > c.goodness {

@@ -18,6 +18,7 @@ enum Implementation {
     Vecrem,
     Once,
     Precalc,
+    Weight,
 }
 
 impl std::str::FromStr for Implementation {
@@ -29,6 +30,7 @@ impl std::str::FromStr for Implementation {
             "vecrem" => Ok(Self::Vecrem),
             "once" => Ok(Self::Once),
             "precalc" => Ok(Self::Precalc),
+            "weight" => Ok(Self::Weight),
             _ => Err(format!("Unknown implementation '{}'", s)),
         }
     }
@@ -50,21 +52,32 @@ fn main() {
         Implementation::Precalc => {
             play(wordle::algorithms::Precalc::new, args.max)
         },
+        Implementation::Weight => {
+            play(wordle::algorithms::Weight::new, args.max)
+        },
     }
 }
 
 fn play<G>(mut mk: impl FnMut() -> G, max: Option<usize>) where G: Guesser {
     let w = Wordle::new();
 
+    let mut score = 0;
+    let mut games = 0;
+
     for answer in GAMES.split_whitespace().take(max.unwrap_or(usize::MAX)) {
         let answer_b: Word = answer.as_bytes().try_into().expect("all answers are 5 characters");
 
         let guesser = (mk)();
 
-        if let Some(score) = w.play(answer_b, guesser) {
-            println!("guessed '{}' in {}", answer, score);
+        if let Some(s) = w.play(answer_b, guesser) {
+            games += 1;
+            score += s;
+
+            println!("guessed '{}' in {}", answer, s);
         } else {
             eprintln!("Failed to guess");
         }
     }
+
+    println!("average score: {:.2}", score as f64 / games as f64);
 }

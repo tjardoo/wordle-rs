@@ -9,3 +9,6 @@ pub use once_init::OnceInit;
 
 mod precalc;
 pub use precalc::Precalc;
+
+mod weight;
+pub use weight::Weight;

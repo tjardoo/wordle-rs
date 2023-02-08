@@ -71,7 +71,7 @@ impl Guesser for Allocs {
                sum += p_of_this_pattern * p_of_this_pattern.log2();
             }
 
-            let goodness = -sum.neg();
+            let goodness = sum.neg();
 
             if let Some(c) = best {
                 if goodness > c.goodness {
