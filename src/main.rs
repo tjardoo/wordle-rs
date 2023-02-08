@@ -16,6 +16,7 @@ struct Args {
 enum Implementation {
     Naive,
     Allocs,
+    Vecrem,
 }
 
 impl std::str::FromStr for Implementation {
@@ -25,6 +26,7 @@ impl std::str::FromStr for Implementation {
         match s {
             "naive" => Ok(Self::Naive),
             "allocs" => Ok(Self::Allocs),
+            "vecrem" => Ok(Self::Vecrem),
             _ => Err(format!("Unknown implementation '{}'", s)),
         }
     }
@@ -39,6 +41,9 @@ fn main() {
         },
         Implementation::Allocs => {
             play(wordle::algorithms::Allocs::new, args.max)
+        },
+        Implementation::Vecrem => {
+            play(wordle::algorithms::Vecrem::new, args.max)
         },
     }
 }

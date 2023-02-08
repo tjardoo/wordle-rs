@@ -28,6 +28,8 @@ impl Wordle {
         for i in 1..=32 {
             let guess = guesser.guess(&history);
 
+            println!("guessing: '{}'", guess);
+
             if guess == answer {
                 return Some(i);
             }
