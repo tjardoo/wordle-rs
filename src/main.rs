@@ -1,4 +1,4 @@
-use wordle::{Wordle, Guesser};
+use wordle::{Wordle, Guesser, Word};
 use clap::Parser;
 
 const GAMES: &str = include_str!("../answers.txt");
@@ -14,7 +14,6 @@ struct Args {
 
 #[derive(Clone)]
 enum Implementation {
-    Naive,
     Allocs,
     Vecrem,
     Once,
@@ -25,7 +24,6 @@ impl std::str::FromStr for Implementation {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "naive" => Ok(Self::Naive),
             "allocs" => Ok(Self::Allocs),
             "vecrem" => Ok(Self::Vecrem),
             "once" => Ok(Self::Once),
@@ -38,9 +36,6 @@ fn main() {
     let args = Args::parse();
 
     match args.implementation {
-        Implementation::Naive => {
-            play(wordle::algorithms::Naive::new, args.max)
-        },
         Implementation::Allocs => {
             play(wordle::algorithms::Allocs::new, args.max)
         },
@@ -57,9 +52,11 @@ fn play<G>(mut mk: impl FnMut() -> G, max: Option<usize>) where G: Guesser {
     let w = Wordle::new();
 
     for answer in GAMES.split_whitespace().take(max.unwrap_or(usize::MAX)) {
+        let answer_b: Word = answer.as_bytes().try_into().expect("all answers are 5 characters");
+
         let guesser = (mk)();
 
-        if let Some(score) = w.play(answer, guesser) {
+        if let Some(score) = w.play(answer_b, guesser) {
             println!("guessed '{}' in {}", answer, score);
         } else {
             eprintln!("Failed to guess");
