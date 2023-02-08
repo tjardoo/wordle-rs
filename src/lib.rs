@@ -1,4 +1,4 @@
-use std::{collections::HashSet, borrow::Cow};
+use std::collections::HashSet;
 
 pub mod algorithms;
 
@@ -45,10 +45,10 @@ impl Wordle {
                 std::str::from_utf8(&guess).unwrap()
             );
 
-            let correctness = Correctness::compute(&answer, &guess);
+            let correctness = Correctness::compute(answer, guess);
 
             history.push(Guess {
-                word: Cow::Owned(guess),
+                word: guess,
                 mask: correctness,
             })
         }
@@ -65,7 +65,7 @@ pub enum Correctness {
 }
 
 impl Correctness {
-    fn compute(answer: &Word, guess: &Word) -> [Self; 5] {
+    fn compute(answer: Word, guess: Word) -> [Self; 5] {
         assert_eq!(answer.len(), 5);
         assert_eq!(guess.len(), 5);
 
@@ -117,16 +117,16 @@ impl Correctness {
     }
 }
 
-pub struct Guess<'a> {
-    pub word: Cow<'a, Word>,
+pub struct Guess {
+    pub word: Word,
     pub mask: [Correctness; 5],
 }
 
-impl Guess<'_> {
-    pub fn matches(&self, target_word: &Word) -> bool {
+impl Guess {
+    pub fn matches(&self, target_word: Word) -> bool {
         // if guess G gives mask C against answer A,
         // then guess A should also give mask C against answer G
-        Correctness::compute(target_word, &self.word) == self.mask
+        Correctness::compute(target_word, self.word) == self.mask
     }
 }
 
@@ -167,25 +167,24 @@ macro_rules! mask {
 mod tests {
     mod guess_matcher {
         use crate::Guess;
-        use std::borrow::Cow;
 
         macro_rules! check {
             ($prev:literal + [$($mask:tt)+] allows $next:literal) => {
                 assert!(Guess {
-                    word: Cow::Borrowed($prev),
+                    word: *$prev,
                     mask: mask![$($mask )+]
                 }
-                .matches($next));
+                .matches(*$next));
 
                 // assert_eq!($crate::Correctness::compute($next, $prev), mask![$($mask )+]);
             };
 
             ($prev:literal + [$($mask:tt)+] disallows $next:literal) => {
                 assert!(!Guess {
-                    word: Cow::Borrowed($prev),
+                    word: *$prev,
                     mask: mask![$($mask )+]
                 }
-                .matches($next));
+                .matches(*$next));
 
                 // assert_ne!($crate::Correctness::compute($next, $prev), mask![$($mask )+]);
             };
@@ -302,7 +301,7 @@ mod tests {
         #[test]
         fn all_green() {
             assert_eq!(
-                Correctness::compute(b"abcde", b"abcde"),
+                Correctness::compute(*b"abcde", *b"abcde"),
                 mask![C C C C C],
             );
         }
@@ -310,7 +309,7 @@ mod tests {
         #[test]
         fn all_gray() {
             assert_eq!(
-                Correctness::compute(b"abcde", b"fghij"),
+                Correctness::compute(*b"abcde", *b"fghij"),
                 mask![W W W W W],
             );
         }
@@ -318,7 +317,7 @@ mod tests {
         #[test]
         fn all_yellow() {
             assert_eq!(
-                Correctness::compute(b"abcde", b"eabcd"),
+                Correctness::compute(*b"abcde", *b"eabcd"),
                 mask![M M M M M],
             );
         }
@@ -326,7 +325,7 @@ mod tests {
         #[test]
         fn repeat_green() {
             assert_eq!(
-                Correctness::compute(b"aabbb", b"aaccc"),
+                Correctness::compute(*b"aabbb", *b"aaccc"),
                 mask![C C W W W],
             );
         }
@@ -334,7 +333,7 @@ mod tests {
         #[test]
         fn repeat_yellow() {
             assert_eq!(
-                Correctness::compute(b"aabbb", b"ccaac"),
+                Correctness::compute(*b"aabbb", *b"ccaac"),
                 mask![W W M M W],
             );
         }
@@ -342,7 +341,7 @@ mod tests {
         #[test]
         fn repeat_some_green() {
             assert_eq!(
-                Correctness::compute(b"aabbb", b"caacc"),
+                Correctness::compute(*b"aabbb", *b"caacc"),
                 mask![W C M W W],
             );
         }
@@ -350,7 +349,7 @@ mod tests {
         #[test]
         fn repeat_some_yellow() {
             assert_eq!(
-                Correctness::compute(b"azzaz", b"aaabb"),
+                Correctness::compute(*b"azzaz", *b"aaabb"),
                 mask![C M W W W],
             );
         }
@@ -358,7 +357,7 @@ mod tests {
         #[test]
         fn assert_some_red() {
             assert_eq!(
-                Correctness::compute(b"abcde", b"aacde"),
+                Correctness::compute(*b"abcde", *b"aacde"),
                 mask![C W C C C],
             );
         }

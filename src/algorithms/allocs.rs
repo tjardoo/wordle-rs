@@ -1,9 +1,9 @@
-use std::{collections::HashMap, ops::Neg, borrow::Cow};
+use std::{collections::HashMap, ops::Neg};
 
 use crate::{Guesser, Guess, DICTIONARY, Correctness, Word};
 
 pub struct Allocs {
-    remaining: HashMap<&'static Word, usize>,
+    remaining: HashMap<Word, usize>,
 }
 
 impl Allocs {
@@ -26,14 +26,14 @@ impl Allocs {
 
 #[derive(Debug, Clone, Copy)]
 struct Candidate {
-    word: &'static Word,
+    word: Word,
     goodness: f64,
 }
 
 impl Guesser for Allocs {
     fn guess(&mut self, history: &[Guess]) -> Word {
         if let Some(last) = history.last() {
-            self.remaining.retain(|word, _| last.matches(word));
+            self.remaining.retain(|&word, _| last.matches(word));
         }
 
         if history.is_empty() {
@@ -52,9 +52,9 @@ impl Guesser for Allocs {
             for pattern in Correctness::patterns() {
                 let mut in_pattern_total = 0;
 
-                for (candidate, count) in &self.remaining {
+                for (&candidate, count) in &self.remaining {
                     let g = Guess {
-                        word: Cow::Borrowed(word),
+                        word,
                         mask: pattern,
                     };
 
@@ -76,8 +76,8 @@ impl Guesser for Allocs {
             if let Some(c) = best {
                 if goodness > c.goodness {
                     eprintln!("{:?} is better than {:?} ({} > {})",
-                        std::str::from_utf8(word).unwrap(),
-                        std::str::from_utf8(c.word).unwrap(),
+                        std::str::from_utf8(&word).unwrap(),
+                        std::str::from_utf8(&c.word).unwrap(),
                         goodness,
                         c.goodness
                     );
@@ -95,6 +95,6 @@ impl Guesser for Allocs {
             }
         }
 
-        *best.unwrap().word
+        best.unwrap().word
     }
 }

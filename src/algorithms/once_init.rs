@@ -3,10 +3,10 @@ use once_cell::sync::OnceCell;
 
 use crate::{Guesser, Guess, DICTIONARY, Correctness, Word};
 
-static INITIAL: OnceCell<Vec<(&'static Word, usize)>> = OnceCell::new();
+static INITIAL: OnceCell<Vec<(Word, usize)>> = OnceCell::new();
 
 pub struct OnceInit {
-    remaining: Cow<'static, Vec<(&'static Word, usize)>>,
+    remaining: Cow<'static, Vec<(Word, usize)>>,
 }
 
 impl OnceInit {
@@ -31,7 +31,7 @@ impl OnceInit {
 
 #[derive(Debug, Clone, Copy)]
 struct Candidate {
-    word: &'static Word,
+    word: Word,
     goodness: f64,
 }
 
@@ -41,12 +41,12 @@ impl Guesser for OnceInit {
             if matches!(self.remaining, Cow::Owned(_)) {
                 self.remaining
                     .to_mut()
-                    .retain(|(word, _)| last.matches(word));
+                    .retain(|&(word, _)| last.matches(word));
             } else {
                 self.remaining = Cow::Owned(
                     self.remaining
                         .iter()
-                        .filter(|(word, _)| last.matches(word))
+                        .filter(|&&(word, _)| last.matches(word))
                         .copied()
                         .collect(),
                 );
@@ -69,9 +69,9 @@ impl Guesser for OnceInit {
             for pattern in Correctness::patterns() {
                 let mut in_pattern_total = 0;
 
-                for (candidate, count) in &*self.remaining {
+                for &(candidate, count) in &*self.remaining {
                     let g = Guess {
-                        word: Cow::Borrowed(word),
+                        word,
                         mask: pattern,
                     };
 
@@ -93,8 +93,8 @@ impl Guesser for OnceInit {
             if let Some(c) = best {
                 if goodness > c.goodness {
                     eprintln!("{:?} is better than {:?} ({} > {})",
-                        std::str::from_utf8(word).unwrap(),
-                        std::str::from_utf8(c.word).unwrap(),
+                        std::str::from_utf8(&word).unwrap(),
+                        std::str::from_utf8(&c.word).unwrap(),
                         goodness,
                         c.goodness
                     );
@@ -112,6 +112,6 @@ impl Guesser for OnceInit {
             }
         }
 
-        *best.unwrap().word
+        best.unwrap().word
     }
 }
