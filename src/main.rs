@@ -17,6 +17,7 @@ enum Implementation {
     Allocs,
     Vecrem,
     Once,
+    Precalc,
 }
 
 impl std::str::FromStr for Implementation {
@@ -27,6 +28,7 @@ impl std::str::FromStr for Implementation {
             "allocs" => Ok(Self::Allocs),
             "vecrem" => Ok(Self::Vecrem),
             "once" => Ok(Self::Once),
+            "precalc" => Ok(Self::Precalc),
             _ => Err(format!("Unknown implementation '{}'", s)),
         }
     }
@@ -44,6 +46,9 @@ fn main() {
         },
         Implementation::Once => {
             play(wordle::algorithms::OnceInit::new, args.max)
+        },
+        Implementation::Precalc => {
+            play(wordle::algorithms::Precalc::new, args.max)
         },
     }
 }
