@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use colored::Colorize;
 
 pub mod algorithms;
 
@@ -33,9 +34,11 @@ impl Wordle {
         for i in 1..=32 {
             let guess = guesser.guess(&history);
 
-            println!("guessing: '{}'", std::str::from_utf8(&guess).unwrap());
-
             if guess == answer {
+                let letters = std::str::from_utf8(&guess).unwrap();
+
+                println!("{}", letters.bold().white().on_green());
+
                 return Some(i);
             }
 
@@ -46,6 +49,25 @@ impl Wordle {
             );
 
             let correctness = Correctness::compute(answer, guess);
+
+            let letters = std::str::from_utf8(&guess).unwrap();
+
+            for (i, letter) in letters.chars().enumerate() {
+                let letter = letter.to_string();
+
+                match correctness[i] {
+                    Correctness::Correct => {
+                        print!("{}", letter.bold().white().on_green());
+                    },
+                    Correctness::Misplaced => {
+                        print!("{}", letter.bold().white().on_yellow());
+                    },
+                    Correctness::Wrong => {
+                        print!("{}", letter.bold().white().on_bright_black());
+                    },
+                }
+            }
+            println!("");
 
             history.push(Guess {
                 word: guess,

@@ -4,14 +4,26 @@ YouTube video: [Implementing and Optimizing a Wordle Solver in Rust](https://www
 
 ## Usage
 
-The example below uses the `cutoff` algorithm. See the directory `/src/algorithms` for all available implementations.
+The example below uses the `cutoff` algorithm and will play `5` games consecutively.
 
-```rust
+```sh
 cargo run -- --implementation cutoff --max 5
 ```
 
+## Available Algorithms
+
+List is ordered on performance (fastest -> slowest):
+
+- Cutoff
+- Prune
+- Weight
+- Precalc
+- Once
+- Vecrem
+- Allocs
+
 ## Testing
 
-```rust
+```sh
 cargo test
 ```

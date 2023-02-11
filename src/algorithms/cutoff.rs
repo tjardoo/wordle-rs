@@ -122,12 +122,12 @@ impl Guesser for Cutoff {
 
             if let Some(c) = best {
                 if goodness > c.goodness {
-                    eprintln!("{:?} is better than {:?} ({} > {})",
-                        std::str::from_utf8(&word).unwrap(),
-                        std::str::from_utf8(&c.word).unwrap(),
-                        goodness,
-                        c.goodness
-                    );
+                    // eprintln!("{:?} is better than {:?} ({} > {})",
+                    //     std::str::from_utf8(&word).unwrap(),
+                    //     std::str::from_utf8(&c.word).unwrap(),
+                    //     goodness,
+                    //     c.goodness
+                    // );
 
                     best = Some(Candidate {
                         word,
